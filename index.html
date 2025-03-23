@@ -821,21 +821,66 @@
         }
 
         // دالة التحقق من وقت المسابقة
+
+        
         function checkQuizTimeStatus() {
-            // التحقق من وضع المسابقة أولاً
-            if (QUIZ_MODE === "always") {
-                return {
-                    isAvailable: true,
-                    message: "المسابقة متاحة الآن! (وضع الاختبار)",
-                    status: "available"
-                };
-            } else if (QUIZ_MODE === "never") {
-                return {
-                    isAvailable: false,
-                    message: "المسابقة غير متاحة (وضع الاختبار)",
-                    status: "ended"
-                };
-            }
+    // التحقق من وضع المسابقة أولاً
+    if (QUIZ_MODE === "always") {
+        return {
+            isAvailable: true,
+            message: "المسابقة متاحة الآن! (وضع الاختبار)",
+            status: "available"
+        };
+    } else if (QUIZ_MODE === "never") {
+        return {
+            isAvailable: false,
+            message: "المسابقة غير متاحة (وضع الاختبار)",
+            status: "ended"
+        };
+    }
+    
+    // الحصول على الوقت الحالي بتوقيت المغرب
+    const now = new Date();
+    const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
+    const currentHour = moroccoTime.getHours();
+    const currentMinute = moroccoTime.getMinutes();
+    
+    // تحويل الوقت الحالي إلى دقائق
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    const quizStartTimeInMinutes = QUIZ_START_HOUR * 60 + QUIZ_START_MINUTE;
+    const quizEndTimeInMinutes = QUIZ_END_HOUR * 60 + QUIZ_END_MINUTE;
+    
+    if (currentTimeInMinutes >= quizStartTimeInMinutes && currentTimeInMinutes < quizEndTimeInMinutes) {
+        return {
+            isAvailable: true,
+            message: "المسابقة متاحة الآن!",
+            status: "available"
+        };
+    } else if (currentTimeInMinutes < quizStartTimeInMinutes) {
+        const hoursRemaining = Math.floor((quizStartTimeInMinutes - currentTimeInMinutes) / 60);
+        const minutesRemaining = (quizStartTimeInMinutes - currentTimeInMinutes) % 60;
+        
+        let timeMessage = "";
+        if (hoursRemaining > 0) {
+            timeMessage = `${hoursRemaining} ساعة و ${minutesRemaining} دقيقة`;
+        } else {
+            timeMessage = `${minutesRemaining} دقيقة`;
+        }
+        
+        return {
+            isAvailable: false,
+            message: `المسابقة ستبدأ بعد ${timeMessage} (الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً)`,
+            status: "upcoming"
+        };
+    } else {
+        return {
+            isAvailable: false,
+            message: `انتهت المسابقة لليوم. تبدأ غدًا الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً`,
+            status: "ended"
+        };
+    }
+}
+
             
             // الحصول على الوقت الحالي
             const now = new Date();
@@ -889,12 +934,14 @@
          * استخدام هذا التنسيق لتجنب مشاكل المناطق الزمنية
          */
         function getTodayFormatted() {
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            return `${day}-${month}-${year}`;
-        }
+    const now = new Date();
+    const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
+    const day = String(moroccoTime.getDate()).padStart(2, '0');
+    const month = String(moroccoTime.getMonth() + 1).padStart(2, '0');
+    const year = moroccoTime.getFullYear();
+    return `${day}-${month}-${year}`;
+}
+
 
         /**
          * التحقق من إعادة ضبط المشاركة اليومية
@@ -1041,14 +1088,24 @@
 
         // تحديث التاريخ والوقت
         function updateDateTime() {
-            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-            const now = new Date();
-            const dayName = days[now.getDay()];
-            const date = now.toLocaleDateString('ar-SA');
-            
-            document.getElementById('day-name').textContent = dayName;
-            document.getElementById('current-date').textContent = date;
-        }
+    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const now = new Date();
+    
+    // تعيين المنطقة الزمنية للمغرب
+    const moroccoTime = new Intl.DateTimeFormat('ar-MA', {
+        timeZone: 'Africa/Casablanca',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(now);
+    
+    const dayName = days[now.getDay()];
+    
+    document.getElementById('day-name').textContent = dayName;
+    document.getElementById('current-date').textContent = moroccoTime;
+}
+
 
         // بدء العد التنازلي
         function startCountdown() {
