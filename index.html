@@ -827,6 +827,44 @@ function checkQuizTimeStatus() {
     };
 }
 
+
+    function shuffleQuestions(questions) {
+    try {
+        const shuffledQuestions = questions.map(q => {
+            // نسخ السؤال الأصلي
+            const question = { ...q };
+            
+            // إنشاء مصفوفة من الأزواج (الخيار، الإجابة الصحيحة)
+            const pairs = question.options.map((option, index) => ({
+                option,
+                isCorrect: index === question.correct
+            }));
+            
+            // خلط الخيارات
+            const shuffledPairs = shuffleArray(pairs);
+            
+            // تحديث الخيارات والإجابة الصحيحة
+            question.options = shuffledPairs.map(pair => pair.option);
+            question.correct = shuffledPairs.findIndex(pair => pair.isCorrect);
+            
+            return question;
+        });
+
+        return {
+            questions: shuffledQuestions,
+            correctAnswers: shuffledQuestions.map(q => q.correct)
+        };
+    } catch (error) {
+        console.error('خطأ في خلط الأسئلة:', error);
+        return {
+            questions: questions,
+            correctAnswers: questions.map(q => q.correct)
+        };
+    }
+}
+
+
+    
 // دوال المسابقة الرئيسية
 async function initializeQuiz() {
     try {
