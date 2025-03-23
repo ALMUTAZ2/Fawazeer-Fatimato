@@ -798,7 +798,129 @@
                 const correctOption = options[question.correct];
                 
                 // نخلط الخيارات
-                const shuffledOptions = shuffleArray(options);
+        function checkQuizTimeStatus() {
+    // التحقق من وضع المسابقة أولاً
+    if (QUIZ_MODE === "always") {
+        return {
+            isAvailable: true,
+            message: "المسابقة متاحة الآن! (وضع الاختبار)",
+            status: "available"
+        };
+    } else if (QUIZ_MODE === "never") {
+        return {
+            isAvailable: false,
+            message: "المسابقة غير متاحة حالياً (وضع الإيقاف)",
+            status: "ended"
+        };
+    }
+
+    try {
+        // الحصول على الوقت الحالي بتوقيت المغرب
+        const now = new Date();
+        const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
+        const currentHour = moroccoTime.getHours();
+        const currentMinute = moroccoTime.getMinutes();
+
+        // تحويل الأوقات إلى دقائق للمقارنة السهلة
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+        const startTimeInMinutes = QUIZ_START_HOUR * 60 + QUIZ_START_MINUTE;
+        let endTimeInMinutes = QUIZ_END_HOUR * 60 + QUIZ_END_MINUTE;
+
+        // تعديل وقت النهاية إذا كان في اليوم التالي
+        if (QUIZ_END_HOUR < QUIZ_START_HOUR) {
+            endTimeInMinutes += 24 * 60;
+        }
+
+        // التحقق مما إذا كان الوقت الحالي ضمن فترة المسابقة
+        let currentTimeAdjusted = currentTimeInMinutes;
+        if (currentTimeInMinutes < startTimeInMinutes && QUIZ_END_HOUR < QUIZ_START_HOUR) {
+            currentTimeAdjusted += 24 * 60;
+        }
+
+        if (currentTimeAdjusted >= startTimeInMinutes && currentTimeAdjusted < endTimeInMinutes) {
+            // المسابقة متاحة حالياً
+            return {
+                isAvailable: true,
+                message: "المسابقة متاحة الآن!",
+                status: "available"
+            };
+        }
+
+        // حساب الوقت المتبقي حتى المسابقة القادمة
+        let nextStartTime;
+        if (currentTimeInMinutes < startTimeInMinutes) {
+            // المسابقة ستبدأ لاحقاً اليوم
+            nextStartTime = startTimeInMinutes - currentTimeInMinutes;
+        } else {
+            // المسابقة ستبدأ غداً
+            nextStartTime = (24 * 60 + startTimeInMinutes) - currentTimeInMinutes;
+        }
+
+        const hoursRemaining = Math.floor(nextStartTime / 60);
+        const minutesRemaining = nextStartTime % 60;
+
+        // تنسيق رسالة الوقت المتبقي
+        let timeMessage = '';
+        
+        if (hoursRemaining > 0) {
+            timeMessage += `${hoursRemaining} ${hoursRemaining === 1 ? 'ساعة' : 'ساعات'}`;
+            if (minutesRemaining > 0) {
+                timeMessage += ' و ';
+            }
+        }
+        
+        if (minutesRemaining > 0 || hoursRemaining === 0) {
+            timeMessage += `${minutesRemaining} ${minutesRemaining === 1 ? 'دقيقة' : 'دقائق'}`;
+        }
+
+        // تنسيق وقت بدء المسابقة
+        const startPeriod = QUIZ_START_HOUR >= 12 ? 'مساءً' : 'صباحاً';
+        const displayHour = QUIZ_START_HOUR > 12 ? QUIZ_START_HOUR - 12 : QUIZ_START_HOUR;
+        const startTimeFormatted = `${displayHour}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} ${startPeriod}`;
+
+        return {
+            isAvailable: false,
+            message: `المسابقة ستبدأ بعد ${timeMessage} (الساعة ${startTimeFormatted})`,
+            status: "upcoming",
+            nextQuizTime: {
+                hours: hoursRemaining,
+                minutes: minutesRemaining,
+                totalMinutes: nextStartTime
+            }
+        };
+
+    } catch (error) {
+        console.error('خطأ في التحقق من وقت المسابقة:', error);
+        return {
+            isAvailable: false,
+            message: "عذراً، حدث خطأ في التحقق من وقت المسابقة",
+            status: "error"
+        };
+    }
+}
+
+// للتحقق من صحة التوقيت، يمكنك إضافة هذا الكود للاختبار:
+function testQuizTime() {
+    const moroccoTime = new Date().toLocaleString('ar-MA', {
+        timeZone: 'Africa/Casablanca',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    
+    console.log('الوقت الحالي في المغرب:', moroccoTime);
+    const status = checkQuizTimeStatus();
+    console.log('حالة المسابقة:', status);
+    return status;
+}
+
+// يمكنك استدعاء دالة الاختبار هكذا:
+// testQuizTime();
+        const shuffledOptions = shuffleArray(options);
                 
                 // نحدد موقع الإجابة الصحيحة بعد الخلط
                 const newCorrectIndex = shuffledOptions.indexOf(correctOption);
@@ -823,113 +945,7 @@
         // دالة التحقق من وقت المسابقة
 
         
-        function checkQuizTimeStatus() {
-    // التحقق من وضع المسابقة أولاً
-    if (QUIZ_MODE === "always") {
-        return {
-            isAvailable: true,
-            message: "المسابقة متاحة الآن! (وضع الاختبار)",
-            status: "available"
-        };
-    } else if (QUIZ_MODE === "never") {
-        return {
-            isAvailable: false,
-            message: "المسابقة غير متاحة (وضع الاختبار)",
-            status: "ended"
-        };
-    }
-    
-    // الحصول على الوقت الحالي بتوقيت المغرب
-    const now = new Date();
-    const moroccoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' }));
-    const currentHour = moroccoTime.getHours();
-    const currentMinute = moroccoTime.getMinutes();
-    
-    // تحويل الوقت الحالي إلى دقائق
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-    const quizStartTimeInMinutes = QUIZ_START_HOUR * 60 + QUIZ_START_MINUTE;
-    const quizEndTimeInMinutes = QUIZ_END_HOUR * 60 + QUIZ_END_MINUTE;
-    
-    if (currentTimeInMinutes >= quizStartTimeInMinutes && currentTimeInMinutes < quizEndTimeInMinutes) {
-        return {
-            isAvailable: true,
-            message: "المسابقة متاحة الآن!",
-            status: "available"
-        };
-    } else if (currentTimeInMinutes < quizStartTimeInMinutes) {
-        const hoursRemaining = Math.floor((quizStartTimeInMinutes - currentTimeInMinutes) / 60);
-        const minutesRemaining = (quizStartTimeInMinutes - currentTimeInMinutes) % 60;
-        
-        let timeMessage = "";
-        if (hoursRemaining > 0) {
-            timeMessage = `${hoursRemaining} ساعة و ${minutesRemaining} دقيقة`;
-        } else {
-            timeMessage = `${minutesRemaining} دقيقة`;
-        }
-        
-        return {
-            isAvailable: false,
-            message: `المسابقة ستبدأ بعد ${timeMessage} (الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً)`,
-            status: "upcoming"
-        };
-    } else {
-        return {
-            isAvailable: false,
-            message: `انتهت المسابقة لليوم. تبدأ غدًا الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً`,
-            status: "ended"
-        };
-    }
-}
-
-            
-            // الحصول على الوقت الحالي
-            const now = new Date();
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
-            
-            // تحويل الوقت الحالي إلى دقائق منذ منتصف الليل للمقارنة السهلة
-            const currentTimeInMinutes = currentHour * 60 + currentMinute;
-            
-            // تحديد أوقات المسابقة باستخدام المتغيرات المعرفة
-            const quizStartTimeInMinutes = QUIZ_START_HOUR * 60 + QUIZ_START_MINUTE;
-            const quizEndTimeInMinutes = QUIZ_END_HOUR * 60 + QUIZ_END_MINUTE;
-            
-            if (currentTimeInMinutes >= quizStartTimeInMinutes && currentTimeInMinutes < quizEndTimeInMinutes) {
-                // المسابقة متاحة الآن
-                return {
-                    isAvailable: true,
-                    message: "المسابقة متاحة الآن!",
-                    status: "available"
-                };
-            } else if (currentTimeInMinutes < quizStartTimeInMinutes) {
-                // المسابقة ستبدأ لاحقًا
-                // حساب الوقت المتبقي حتى بدء المسابقة
-                const hoursRemaining = Math.floor((quizStartTimeInMinutes - currentTimeInMinutes) / 60);
-                const minutesRemaining = (quizStartTimeInMinutes - currentTimeInMinutes) % 60;
-                
-                let timeMessage = "";
-                if (hoursRemaining > 0) {
-                    timeMessage = `${hoursRemaining} ساعة و ${minutesRemaining} دقيقة`;
-                } else {
-                    timeMessage = `${minutesRemaining} دقيقة`;
-                }
-                
-                return {
-                    isAvailable: false,
-                    message: `المسابقة ستبدأ بعد ${timeMessage} (الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً)`,
-                    status: "upcoming"
-                };
-            } else {
-                // المسابقة انتهت
-                return {
-                    isAvailable: false,
-                    message: `انتهت المسابقة لليوم. تبدأ غدًا الساعة ${QUIZ_START_HOUR}:${QUIZ_START_MINUTE.toString().padStart(2, '0')} مساءً`,
-                    status: "ended"
-                };
-            }
-        }
-        
-        /**
+                /**
          * الحصول على تاريخ اليوم بتنسيق موحد (DD-MM-YYYY)
          * استخدام هذا التنسيق لتجنب مشاكل المناطق الزمنية
          */
